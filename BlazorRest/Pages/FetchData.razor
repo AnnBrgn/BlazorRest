@@ -1,0 +1,136 @@
+﻿@page "/store"
+
+<PageTitle>Store</PageTitle>
+
+@using BlazorRest.Data
+@using System.ComponentModel.DataAnnotations;
+@inject RestaurantService ForecastService
+@inject IJSRuntime JsRuntime
+@inject NavigationManager Navigation
+
+<h1 class="text-center">Menu</h1>
+<button class="btn-light align-self-auto" @onclick="AddProduct">Add Product</button>
+@if (products == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Icon</th>
+                <th>Position</th>
+                <th>Description</th>
+                <th>Add to Cart</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var product in products)
+            {
+                <tr>
+                    @if (product.Icon is null)
+                    {
+                        <td><InputFile OnChange="(s)=>AddImage(s, product.Id)" single /></td>
+                    }
+                    else
+                    {
+                        <td><img class="img-fluid img-thumbnail foodThumbnail" src="@product.imageDataURL"/></td>
+                    }
+                    @if (product.Title is null)
+                    {
+                        <td>
+                            <EditForm Model="product" OnValidSubmit="(s)=>UpdateProduct(product.Id)">
+                                <InputText @bind-Value="product.Title" />
+                            </EditForm>
+                        </td>
+                    }
+                    else
+                    {
+                        <td>@product.Title</td>
+                    }
+                    @if (product.Description is null)
+                    {
+                        <td>
+                            <EditForm Model="product" OnValidSubmit="(s)=>UpdateProduct(product.Id)">
+                                <td><InputText @bind-Value="product.Description" /></td>
+                            </EditForm>
+                        </td>
+                    }
+                    else
+                    {
+                        <td>@product.Description</td>
+                    }
+                    <td>
+                        <button class="btn-primary" @onclick="(s)=>AddToCart(product.Id, s)">Add to Cart</button>
+                        <button class="btn-danger" @onclick="()=>RemoveProduct(product.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private Product[]? products;
+    protected async override Task OnInitializedAsync()
+    {
+        products = await ForecastService.GetProductsAsync();
+    }
+
+    public async void AddProduct()
+    {
+        await ForecastService.AddProduct();
+        Navigation.NavigateTo($"/store", true);
+    }
+
+    public async void UpdateProduct(int id)
+    {
+        var p = products.First(s => s.Id == id);
+        await ForecastService.UpdateProduct(id, p.Title, p.Description);
+        //Navigation.NavigateTo($"/store", true);
+    }
+    public async void RemoveProduct(int id)
+    {
+        await ForecastService.RemoveProduct(id);
+        Navigation.NavigateTo($"/store", true);
+
+    }
+    public async void AddToCart(int id, MouseEventArgs e)
+    {
+        await ForecastService.AddToCart(id);
+        Navigation.NavigateTo($"/cart", true);
+        //Route.RouteAsync(new RouteContext(new HttpContent(""));
+    }
+
+    public async void AddImage(InputFileChangeEventArgs e, int id)
+    {
+        var browserFile = e.File;
+        if (browserFile != null)
+        {
+            try
+            {
+                var fileStream = browserFile.OpenReadStream(5242880);
+                byte[] bytes = new byte[fileStream.Length + 10];
+                int numBytesToRead = (int)fileStream.Length;
+                int numBytesRead = 0;
+                do
+                {
+                    // Read may return anything from 0 to 10.
+                    int n = await fileStream.ReadAsync(bytes, numBytesRead, 10);
+                    numBytesRead += n;
+                    numBytesToRead -= n;
+                } while (numBytesToRead > 0);
+                fileStream.Close();
+                await ForecastService.UploadImage(bytes, id);
+                await JsRuntime.InvokeVoidAsync("alert", "Uploaded");
+                fileStream.Close();
+                Navigation.NavigateTo($"/store", true);
+            }
+            catch (Exception exception)
+            {
+                await JsRuntime.InvokeVoidAsync("alert", exception.Message);
+            }
+        }
+    }
+}

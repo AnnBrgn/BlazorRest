@@ -1,0 +1,56 @@
+﻿@page "/cart"
+@using BlazorRest.Data;
+
+<PageTitle>Cart</PageTitle>
+
+@inject RestaurantService ForecastService
+@inject NavigationManager Navigation
+
+<h1 class="text-center">Counter</h1>
+
+@if (crosses == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Icon</th>
+                <th>Position</th>
+                <th>Description</th>
+                <th>Count</th>
+                <th>Remove</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var product in crosses)
+            {
+                <tr>
+                    <td><img class="img-fluid img-thumbnail foodThumbnail" src="@product.IdProductNavigation.imageDataURL" /></td>
+                    <td>@product.IdProductNavigation.Title</td>
+                    <td>@product.IdProductNavigation.Description</td>
+                    <td>@product.CountProduct</td>
+                    <td><button class="btn-primary" @onclick="()=>RemoveFromCart(product.IdProduct)">Remove from Cart</button></td>
+
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private CrossProductUser[]? crosses;
+    protected async override Task OnInitializedAsync()
+    {
+        crosses = await ForecastService.GetCrossesAsync();
+    }
+
+    public async void RemoveFromCart(int id)
+    {
+        crosses.ToList().Remove(crosses.First(s => s.IdProduct == id));
+        await ForecastService.RemoveFromCart(id);
+        Navigation.NavigateTo($"/cart", true);
+    }
+}

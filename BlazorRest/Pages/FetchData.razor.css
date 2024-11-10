@@ -1,0 +1,9 @@
+﻿.foodThumbnail {
+    max-height: 90px;
+    height:auto;
+    width:auto;
+    display: block;
+}
+.table{
+    vertical-align:central;
+}
